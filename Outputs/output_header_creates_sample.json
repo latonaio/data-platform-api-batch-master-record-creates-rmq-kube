@@ -1,0 +1,43 @@
+{
+	"connection_key": "response",
+	"result": true,
+	"redis_key": "abcdefg",
+	"filepath": "/var/lib/aion/Data/rededge_sdc/abcdef.json",
+	"api_status_code": 200,
+	"runtime_session_id": "boi9ar543dg91ipdnspi099u231280ab0v8af0ew",
+	"business_partner": 101,
+	"service_label": "BILL_OF_MATERIAL",
+	"api_type": "creates",
+	"message": {
+		"Header": {
+			"BillOfMaterial": 280000009,
+			"BillOfMaterialType": null,
+			"Product": "A3750",
+			"OwnerBusinessPartner": 201,
+			"OwnerPlant": "TE01",
+			"BOMAlternativeText": "",
+			"BOMHeaderBaseUnit": "",
+			"BOMHeaderQuantityInBaseUnit": null,
+			"ValidityStartDate": "",
+			"ValidityEndDate": "",
+			"CreationDate": "2023-04-25",
+			"LastChangeDate": "2023-04-25",
+			"BillOfMaterialHeaderText": "",
+			"IsMarkedForDeletion": false
+		},
+		"Item": null
+	},
+	"api_schema": "DPFMBillOfMaterialCreates",
+	"accepter": [
+		"Header"
+	],
+	"deleted": false,
+	"sql_update_result": true,
+	"sql_update_error": "",
+	"subfunc_result": null,
+	"subfunc_error": "",
+	"exconf_result": true,
+	"exconf_error": "",
+	"api_processing_result": true,
+	"api_processing_error": ""
+}

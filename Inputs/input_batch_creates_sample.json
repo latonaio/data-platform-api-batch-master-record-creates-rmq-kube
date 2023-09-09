@@ -1,0 +1,31 @@
+{
+	"connection_key": "request",
+	"result": true,
+	"redis_key": "abcdefg",
+	"filepath": "/var/lib/aion/Data/rededge_sdc/abcdef.json",
+	"api_status_code": 200,
+	"runtime_session_id": "boi9ar543dg91ipdnspi099u231280ab0v8af0ew",
+	"business_partner": null,
+	"service_label": "BATCH_MASTER_RECORD",
+	"api_type": "creates",
+	"Batch": {
+		"Product": "",
+		"BusinessPartner": null,
+		"Plant": "",
+		"Batch": "",
+		"ValidityStartDate": "",
+		"ValidityStartTime": "",
+		"ValidityEndDate": "",
+		"ValidityEndTime": "",
+		"ManufactureDate": "",
+		"CreationDate": "",
+		"CreationTime": "",
+		"LastChangeDate": "",
+		"LastChangeTime": "",
+		"IsMarkedForDeletion": null
+	},
+	"api_schema": "DPFMBatchMasterRecordCreates",
+	"accepter": [
+		"Batch"
+	]
+}

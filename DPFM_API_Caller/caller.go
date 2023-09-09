@@ -3,7 +3,10 @@ package dpfm_api_caller
 import (
 	"context"
 	dpfm_api_input_reader "data-platform-api-batch-master-record-creates-rmq-kube/DPFM_API_Input_Reader"
+	dpfm_api_output_formatter "data-platform-api-batch-master-record-creates-rmq-kube/DPFM_API_Output_Formatter"
 	"data-platform-api-batch-master-record-creates-rmq-kube/config"
+	"data-platform-api-batch-master-record-creates-rmq-kube/existence_conf"
+	"data-platform-api-batch-master-record-creates-rmq-kube/sub_func_complementer"
 	"sync"
 	"time"
 
@@ -16,100 +19,195 @@ type DPFMAPICaller struct {
 	ctx  context.Context
 	conf *config.Conf
 	rmq  *rabbitmq.RabbitmqClient
+
+	configure    *existence_conf.ExistenceConf
+	complementer *sub_func_complementer.SubFuncComplementer
 }
 
 func NewDPFMAPICaller(
 	conf *config.Conf, rmq *rabbitmq.RabbitmqClient,
 
+	confirmor *existence_conf.ExistenceConf,
+	complementer *sub_func_complementer.SubFuncComplementer,
 ) *DPFMAPICaller {
 	return &DPFMAPICaller{
-		ctx:  context.Background(),
-		conf: conf,
-		rmq:  rmq,
+		ctx:          context.Background(),
+		conf:         conf,
+		rmq:          rmq,
+		configure:    confirmor,
+		complementer: complementer,
 	}
 }
 
-func (c *DPFMAPICaller) AsyncBatchMasterRecordCreates(
+func (c *DPFMAPICaller) AsyncCreates(
 	accepter []string,
 	input *dpfm_api_input_reader.SDC,
-
+	output *dpfm_api_output_formatter.SDC,
 	log *logger.Logger,
-
-) []error {
+) (interface{}, []error) {
 	wg := sync.WaitGroup{}
 	mtx := sync.Mutex{}
 	errs := make([]error, 0, 5)
+	//exconfAllExist := false
+	//exconfFin := make(chan error)
 
-	sqlUpdateFin := make(chan error)
+	subFuncFin := make(chan error)
+	subfuncSDC := &sub_func_complementer.SDC{}
 
+	// 他PODへ問い合わせ
+	//wg.Add(1)
+	//go c.exconfProcess(&mtx, &wg, exconfFin, input, output, &exconfAllExist, accepter, &errs, log)
+	if input.APIType == "creates" {
+		//go c.subfuncProcess(&mtx, &wg, subFuncFin, input, output, subfuncSDC, accepter, &errs, log)
+		c.subfuncProcess(&mtx, &wg, subFuncFin, input, output, subfuncSDC, accepter, &errs, log)
+	} else if input.APIType == "updates" {
+		go func() { subFuncFin <- nil }()
+	} else {
+		go func() { subFuncFin <- nil }()
+	}
+	// 処理待ち
+	//_ = time.NewTicker(10 * time.Second)
+	//if err := c.finWait(&mtx, exconfFin, ticker); err != nil || len(errs) != 0 {
+	//	if err != nil {
+	//		errs = append(errs, err)
+	//	}
+	//	return dpfm_api_output_formatter.Message{}, errs
+	//}
+	//if !exconfAllExist {
+	//	mtx.Lock()
+	//	return dpfm_api_output_formatter.Message{}, nil
+	//}
+	//wg.Wait()
+
+	var response interface{}
+	// SQL処理
+	if input.APIType == "creates" {
+		response = c.createSqlProcess(nil, &mtx, input, output, accepter, &errs, log)
+	} else if input.APIType == "updates" {
+		response = c.updateSqlProcess(nil, &mtx, input, output, accepter, &errs, log)
+	}
+
+	return response, nil
+}
+
+func (c *DPFMAPICaller) exconfProcess(
+	mtx *sync.Mutex,
+	wg *sync.WaitGroup,
+	exconfFin chan error,
+	input *dpfm_api_input_reader.SDC,
+	output *dpfm_api_output_formatter.SDC,
+	exconfAllExist *bool,
+	accepter []string,
+	errs *[]error,
+	log *logger.Logger,
+) {
+	defer wg.Done()
+	var e []error
+	*exconfAllExist, e = c.configure.Conf(input, output, accepter, log)
+	if len(e) != 0 {
+		mtx.Lock()
+		*errs = append(*errs, e...)
+		mtx.Unlock()
+		exconfFin <- xerrors.New("exconf error")
+		return
+	}
+	exconfFin <- nil
+}
+
+func (c *DPFMAPICaller) subfuncProcess(
+	mtx *sync.Mutex,
+	wg *sync.WaitGroup,
+	subFuncFin chan error,
+	input *dpfm_api_input_reader.SDC,
+	output *dpfm_api_output_formatter.SDC,
+	subfuncSDC *sub_func_complementer.SDC,
+	accepter []string,
+	errs *[]error,
+	log *logger.Logger,
+) {
 	for _, fn := range accepter {
-		wg.Add(1)
+		//wg.Add(1)
 		switch fn {
-		case "Batch":
-			go c.batchCreate(&wg, &mtx, sqlUpdateFin, log, &errs, input)
+		case "Header":
+			c.headerCreate(mtx, wg, subFuncFin, input, output, subfuncSDC, errs, log)
 		default:
 			wg.Done()
 		}
 	}
+}
 
-	ticker := time.NewTicker(10 * time.Second)
+func (c *DPFMAPICaller) finWait(
+	mtx *sync.Mutex,
+	finChan chan error,
+	ticker *time.Ticker,
+) error {
 	select {
-	case e := <-sqlUpdateFin:
+	case e := <-finChan:
 		if e != nil {
 			mtx.Lock()
-			errs = append(errs, e)
-			return errs
+			return e
 		}
 	case <-ticker.C:
-		mtx.Lock()
-		errs = append(errs, xerrors.New("time out"))
-		return errs
+		return xerrors.New("time out")
 	}
-
 	return nil
 }
 
-func (c *DPFMAPICaller) batchCreate(wg *sync.WaitGroup, mtx *sync.Mutex, errFin chan error, log *logger.Logger, errs *[]error, sdc *dpfm_api_input_reader.SDC) {
+func (c *DPFMAPICaller) headerCreate(
+	mtx *sync.Mutex,
+	wg *sync.WaitGroup,
+	errFin chan error,
+	input *dpfm_api_input_reader.SDC,
+	output *dpfm_api_output_formatter.SDC,
+	subfuncSDC *sub_func_complementer.SDC,
+	errs *[]error,
+	log *logger.Logger,
+) {
 	var err error = nil
-	defer wg.Done()
-	defer func() {
-		errFin <- err
-	}()
-	sessionID := sdc.RuntimeSessionID
-	ctx := context.Background()
-
-	batchData := sdc.BatchMasterRecord
-	res, err := c.rmq.SessionKeepRequest(ctx, c.conf.RMQ.QueueToSQL()[0], map[string]interface{}{"message": batchData, "function": "BatchMasterRecordBatch", "runtime_session_id": sessionID})
+	//defer func() {
+	//	errFin <- err
+	//}()
+	//defer wg.Done()
+	_, err = c.complementer.ComplementHeader(input, subfuncSDC, log)
 	if err != nil {
-		err = xerrors.Errorf("rmq error: %w", err)
-		return
-	}
-	res.Success()
-	if !checkResult(res) {
-
-		sdc.SQLUpdateResult = getBoolPtr(false)
-		sdc.SQLUpdateError = "Batch Data cannot insert"
+		mtx.Lock()
+		*errs = append(*errs, err)
+		mtx.Unlock()
 		return
 	}
 
-	sdc.SQLUpdateResult = getBoolPtr(true)
+	output.SubfuncResult = getBoolPtr(true)
+	if subfuncSDC.SubfuncResult == nil || !*subfuncSDC.SubfuncResult {
+		output.SubfuncResult = getBoolPtr(false)
+		output.SubfuncError = subfuncSDC.SubfuncError
+		err = xerrors.New(output.SubfuncError)
+		return
+	}
 	return
 }
 
 func checkResult(msg rabbitmq.RabbitmqMessage) bool {
 	data := msg.Data()
-	_, ok := data["result"]
+	d, ok := data["result"]
 	if !ok {
 		return false
 	}
-	result, ok := data["result"].(string)
+	result, ok := d.(string)
 	if !ok {
 		return false
 	}
 	return result == "success"
-
 }
 
 func getBoolPtr(b bool) *bool {
 	return &b
+}
+
+func contains(slice []string, target string) bool {
+	for _, v := range slice {
+		if v == target {
+			return true
+		}
+	}
+	return false
 }

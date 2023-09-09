@@ -29,7 +29,7 @@ spec:
             - name: "RMQ_QUEUE_TO_EX_CONF"
               value: ""
             - name: "RMQ_QUEUE_TO_HEADERS_SUB_FUNC"
-              value: ""
+              value: "data-platform-api-batch-master-record-creates-subfunc-queue"
             - name: "RMQ_QUEUE_TO_ITEMS_SUB_FUNC"
               value: ""
             - name: "RMQ_SESSION_CONTROL_QUEUE"
@@ -57,4 +57,4 @@ spec:
       port: 8080
       protocol: TCP
       targetPort: 8080
-      nodePort: 30674
+      nodePort: 30311

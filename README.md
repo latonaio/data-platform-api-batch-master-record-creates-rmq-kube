@@ -1,7 +1,9 @@
 # data-platform-api-batch-master-record-creates-rmq-kube
 
-data-platform-api-batch-master-record-creates-rmq-kube は、周辺業務システム　を データ連携基盤 と統合することを目的に、API でロットマスタデータ を登録するマイクロサービスです。  
-https://xxx.xxx.io/api/API_BATCH_MASTER_RECORD_SRV/creates/
+data-platform-api-batch-master-record-creates-rmq-kube は、周辺業務システム　を データ連携基盤 と統合することを目的に、API でロットマスタデータを登録/更新するマイクロサービスです。
+
+* https://xxx.xxx.io/api/API_BATCH_MASTER_RECORD_SRV/creates/
+* https://xxx.xxx.io/api/API_BATCH_MASTER_RECORD_SRV/updates/
 
 ## 動作環境
 
@@ -13,31 +15,30 @@ data-platform-api-batch-master-record-creates-rmq-kube の動作環境は、次�
 ## 本レポジトリ が 対応する API サービス
 data-platform-api-batch-master-record-creates-rmq-kube が対応する APIサービス は、次のものです。
 
-APIサービス URL: https://xxx.xxx.io/api/API_BATCH_MASTER_RECORD_SRV/creates/
+* APIサービス URL: https://xxx.xxx.io/api/API_BATCH_MASTER_RECORD_SRV/creates/
+* APIサービス URL: https://xxx.xxx.io/api/API_BATCH_MASTER_RECORD_SRV/updates/
 
 ## 本レポジトリ に 含まれる API名
 data-platform-api-batch-master-record-creates-rmq-kube には、次の API をコールするためのリソースが含まれています。  
 
-* A_Batch（ロットマスタ  - ロットデータ ）
+* A_Batch（ロットマスタ - ロット）
 
 ## API への 値入力条件 の 初期値
 data-platform-api-batch-master-record-creates-rmq-kube において、API への値入力条件の初期値は、入力ファイルレイアウトの種別毎に、次の通りとなっています。  
 
 ## データ連携基盤のAPIの選択的コール
 
-Latona および AION の データ連携基盤 関連リソースでは、Inputs フォルダ下の sample.json の accepter に取得したいデータの種別（＝APIの種別）を入力し、指定することができます。  
-なお、同 accepter にAll(もしくは空白)の値を入力することで、全データ（＝全APIの種別）をまとめて取得することができます。  
+Latona および AION の データ連携基盤 関連リソースでは、Inputs フォルダ下の sample.json の accepter に登録/更新したいデータの種別（＝APIの種別）を入力し、指定することができます。  
+なお、同 accepter にAll(もしくは空白)の値を入力することで、全データ（＝全APIの種別）をまとめて登録/更新することができます。  
 
 * sample.jsonの記載例(1)  
 
 accepter において 下記の例のように、データの種別（＝APIの種別）を指定します。  
-ここでは、"Batch" が指定されています。    
+ここでは、"BillOfMaterial" が指定されています。    
   
 ```
 	"api_schema": "DPFMBatchMasterRecordCreates",
-	"accepter": ["Batch"],
-	"batch_id": null,
-	"deleted": false
+	"accepter": ["Batch"]
 ```
   
 * 全データを取得する際のsample.jsonの記載例(2)  
@@ -46,9 +47,7 @@ accepter において 下記の例のように、データの種別（＝APIの�
 
 ```
 	"api_schema": "DPFMBatchMasterRecordCreates",
-	"accepter": ["All"],
-	"batch_id": null,
-	"deleted": false
+	"accepter": ["All"]
 ```
 
 ## 指定されたデータ種別のコール
@@ -57,12 +56,11 @@ accepter における データ種別 の指定に基づいて DPFM_API_Caller �
 caller.go の func() 毎 の 以下の箇所が、指定された API をコールするソースコードです。  
 
 ```
-func (c *DPFMAPICaller) AsyncBatchMasterRecordCreates(
+func (c *DPFMAPICaller) AsyncCreates(
 	accepter []string,
 	input *dpfm_api_input_reader.SDC,
 
 	log *logger.Logger,
-
 ) []error {
 	wg := sync.WaitGroup{}
 	mtx := sync.Mutex{}
@@ -73,8 +71,10 @@ func (c *DPFMAPICaller) AsyncBatchMasterRecordCreates(
 	for _, fn := range accepter {
 		wg.Add(1)
 		switch fn {
-		case "BatchMasterRecord":
-			go c.BatchMasterRecord(&wg, &mtx, sqlUpdateFin, log, &errs, input)
+		case "Header":
+			go c.Header(&wg, &mtx, sqlUpdateFin, log, &errs, input)
+		case "Item":
+			go c.Item(&wg, &mtx, sqlUpdateFin, log, &errs, input)
 		default:
 			wg.Done()
 		}
@@ -100,9 +100,9 @@ func (c *DPFMAPICaller) AsyncBatchMasterRecordCreates(
 
 ## Output  
 本マイクロサービスでは、[golang-logging-library-for-data-platform](https://github.com/latonaio/golang-logging-library-for-data-platform) により、以下のようなデータがJSON形式で出力されます。  
-以下の sample.json の例は ロットマスタ の ロットマスタデータ が取得された結果の JSON の例です。  
-以下の項目のうち、"BatchMasterRecord" は、/DPFM_API_Output_Formatter/type.go 内 の Type BatchMasterRecord {} による出力結果です。"cursor" ～ "time"は、golang-logging-library による 定型フォーマットの出力結果です。  
+以下の sample.json の例は ロットマスタ の ロットデータ が登録/更新された結果の JSON の例です。  
+以下の項目のうち、"Product" ～ "IsMarkedForDeletion" は、/DPFM_API_Output_Formatter/type.go 内 の Type Batch{} による出力結果です。"cursor" ～ "time"は、golang-logging-library-for-data-platform による 定型フォーマットの出力結果です。  
 
 ```
-XXX
+XXXXXXXXXXXXXXXXXXXXXX
 ```

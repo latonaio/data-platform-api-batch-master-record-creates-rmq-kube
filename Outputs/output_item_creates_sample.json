@@ -1,0 +1,59 @@
+{
+	"connection_key": "response",
+	"result": true,
+	"redis_key": "abcdefg",
+	"filepath": "/var/lib/aion/Data/rededge_sdc/abcdef.json",
+	"api_status_code": 200,
+	"runtime_session_id": "boi9ar543dg91ipdnspi099u231280ab0v8af0ew",
+	"business_partner": 101,
+	"service_label": "BILL_OF_MATERIAL",
+	"api_type": "creates",
+	"message": {
+		"Header": null,
+		"Item": [
+			{
+				"BillOfMaterial": 280000009,
+				"BillOfMaterialItem": 1,
+				"ComponentProduct": "P200",
+				"ComponentProductBusinessPartner": 201,
+				"StockConfirmationPlant": "",
+				"BOMAlternativeText": "",
+				"BOMItemBaseUnit": "",
+				"BOMItemQuantityInBaseUnit": null,
+				"ComponentScrapInPercent": null,
+				"ValidityStartDate": "",
+				"ValidityEndDate": "",
+				"BillOfMaterialItemText": "",
+				"IsMarkedForDeletion": false
+			},
+			{
+				"BillOfMaterial": 280000009,
+				"BillOfMaterialItem": 2,
+				"ComponentProduct": "P201",
+				"ComponentProductBusinessPartner": 201,
+				"StockConfirmationPlant": "",
+				"BOMAlternativeText": "",
+				"BOMItemBaseUnit": "",
+				"BOMItemQuantityInBaseUnit": null,
+				"ComponentScrapInPercent": null,
+				"ValidityStartDate": "",
+				"ValidityEndDate": "",
+				"BillOfMaterialItemText": "",
+				"IsMarkedForDeletion": false
+			}
+		]
+	},
+	"api_schema": "DPFMBillOfMaterialCreates",
+	"accepter": [
+		"Item"
+	],
+	"deleted": false,
+	"sql_update_result": true,
+	"sql_update_error": "",
+	"subfunc_result": null,
+	"subfunc_error": "",
+	"exconf_result": true,
+	"exconf_error": "",
+	"api_processing_result": true,
+	"api_processing_error": ""
+}
